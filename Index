@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventario & Acomodo de Tarimas</title>
+    
+    <!-- Configuración PWA / WebApp Instalable -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Inventario">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/box-open.png">
+
+    <!-- Librerías externas -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --secondary: #059669;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-card {
+            background: var(--card);
+            width: 100%;
+            max-width: 520px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 15px;
+        }
+
+        /* NAVEGACIÓN POR PESTAÑAS */
+        .tabs {
+            display: flex;
+            background: #e5e7eb;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            background: transparent;
+            color: #4b5563;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        .header-title h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            color: #111827;
+        }
+
+        .btn-excel {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #4b5563;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            background: white;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: white;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-cam { background: var(--primary); }
+        .btn-save { background: #e91e63; margin-top: 4px; font-size: 1rem; }
+        .btn-action { background: #2563eb; }
+
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            border: 2px solid #3b82f6;
+            display: none;
+        }
+
+        .inv-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .inv-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-left: 5px solid var(--primary);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inv-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .inv-part { font-weight: bold; font-size: 0.9rem; color: #111827; }
+        .inv-weight { font-size: 0.85rem; color: #059669; font-weight: 600; }
+        .inv-tag { font-size: 0.75rem; color: #4b5563; font-weight: 600; }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: var(--danger);
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* ESTILOS DE LA PESTAÑA DE ACOMODO EN TRÁILER */
+        .trailer-header-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            background: #e2e8f0;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border: 2px solid #94a3b8;
+        }
+
+        .trailer-header-grid input {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .trailer-section {
+            border: 2px solid #1e293b;
+            margin-bottom: 12px;
+            background: #fff;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .trailer-section-title {
+            background: #cbd5e1;
+            padding: 6px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 0.85rem;
+            border-bottom: 2px solid #1e293b;
+            text-transform: uppercase;
+        }
+
+        .grid-nivel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 1px solid #94a3b8;
+        }
+
+        .col-lado {
+            padding: 4px;
+        }
+
+        .col-lado:first-child {
+            border-right: 2px dashed #94a3b8;
+        }
+
+        .col-header {
+            font-size: 0.65rem;
+            text-align: center;
+            font-weight: bold;
+            color: #64748b;
+            padding: 2px;
+            background: #f1f5f9;
+        }
+
+        .cell-peso {
+            background: #86efac;
+            border: 1px solid #15803d;
+            padding: 6px 4px;
+            margin: 3px 0;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 4px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .cell-peso.chica {
+            background: #bbf7d0;
+            border-color: #16a34a;
+        }
+
+        .cell-peso.vacia {
+            background: #f1f5f9;
+            border: 1px dashed #cbd5e1;
+            color: #94a3b8;
+        }
+
+        .badge-dim {
+            display: block;
+            font-size: 0.6rem;
+            color: #166534;
+            font-weight: normal;
+        }
+
+        .resumen-nivel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 10px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .tot-box {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .tot-arriba { background: #facc15; }
+        .tot-medio { background: #60a5fa; color: white; }
+        .tot-final { background: #4ade80; }
+
+        .totales-footer {
+            background: #1e293b;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .tot-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .diferencia-box {
+            background: #000;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .diferencia-val {
+            background: #86efac;
+            color: #14532d;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .warnings-container {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #fffbe3;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #b45309;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <!-- Navegación -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="cambiarPestana('tab-inventario')">📦 Inventario</button>
+        <button class="tab-btn" onclick="cambiarPestana('tab-trailer')">🚛 Acomodo Tráiler</button>
+    </div>
+
+    <!-- PESTAÑA 1: INVENTARIO -->
+    <div id="tab-inventario" class="tab-content active">
+        <header>
+            <div class="header-title">
+                <h1>Captura de Inventario</h1>
+            </div>
+            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
+        </header>
+
+        <button class="btn btn-cam" onclick="toggleCamara()">📷 ESCANEAR QR</button>
+        <div id="reader"></div>
+
+        <div class="input-group">
+            <label>Tipo de Tarima</label>
+            <select id="tipoTarima">
+                <option value="Tarima Chica">📦 Tarima Chica (40" x 40")</option>
+                <option value="Tarima Grande">📦 Tarima Grande (48" x 48")</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Número de Parte Detectado</label>
+            <input type="text" id="numParte" placeholder="Escanee un código QR..." readonly style="background: #f9fafb;">
+        </div>
+
+        <div class="input-group">
+            <label>Peso de Tarima (kg / lbs)</label>
+            <input type="number" id="pesoTarima" placeholder="0.00" step="0.01">
+        </div>
+
+        <button class="btn btn-save" onclick="guardarRegistro()">💾 GUARDAR REGISTRO</button>
+
+        <div style="margin-top: 15px;">
+            <div style="text-align: center; font-size: 0.8rem; font-weight: bold; color: #4b5563;" id="counterBadge">
+                Registros Guardados: 0
+            </div>
+            <div id="listaInventario" class="inv-list"></div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 2: ACOMODO EN TRÁILER -->
+    <div id="tab-trailer" class="tab-content">
+        <header>
+            <div class="header-title">
+                <h1>Distribución en Tráiler</h1>
+            </div>
+            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
+        </header>
+
+        <div class="trailer-header-grid">
+            <div>FECHA: <input type="text" id="trFecha" value="13-Aug-26"></div>
+            <div>TRAILER: <input type="text" id="trTrailer" value="53174"></div>
+            <div>SELLO: <input type="text" id="trSello" value="402456"></div>
+            <div>BOL: <input type="text" id="trBol" value=""></div>
+        </div>
+
+        <button class="btn btn-action" onclick="ordenarTrailerAuto()">🔄 ORGANIZAR CÁLCULO DE ACOMODO</button>
+
+        <div id="warningsContainer" class="warnings-container"></div>
+
+        <!-- SECCIÓN ARRIBA (FRENTE) -->
+        <div class="trailer-section">
+            <div class="trailer-section-title">ARRIBA (FRENTE)</div>
+            <div class="grid-nivel">
+                <div class="col-lado">
+                    <div class="col-header">IZQUIERDA</div>
+                    <div id="list-arriba-izq"></div>
+                </div>
+                <div class="col-lado">
+                    <div class="col-header">DERECHA</div>
+                    <div id="list-arriba-der"></div>
+                </div>
+            </div>
+            <div class="resumen-nivel">
+                <span>PESO NIVEL ARRIBA</span>
+                <span class="tot-box tot-arriba" id="tot-arriba">0</span>
+            </div>
+        </div>
+
+        <!-- SECCIÓN MEDIO -->
+        <div class="trailer-section">
+            <div class="trailer-section-title">MEDIO</div>
+            <div class="grid-nivel">
+                <div class="col-lado">
+                    <div class="col-header">IZQUIERDA</div>
+                    <div id="list-medio-izq"></div>
+                </div>
+                <div class="col-lado">
+                    <div class="col-header">DERECHA</div>
+                    <div id="list-medio-der"></div>
+                </div>
+            </div>
+            <div class="resumen-nivel">
+                <span>PESO NIVEL MEDIO</span>
+                <span class="tot-box tot-medio" id="tot-medio">0</span>
+            </div>
+        </div>
+
+        <!-- SECCIÓN FINAL (PUERTA) -->
+        <div class="trailer-section">
+            <div class="trailer-section-title">FINAL (PUERTA)</div>
+            <div class="grid-nivel">
+                <div class="col-lado">
+                    <div class="col-header">IZQUIERDA</div>
+                    <div id="list-final-izq"></div>
+                </div>
+                <div class="col-lado">
+                    <div class="col-header">DERECHA</div>
+                    <div id="list-final-der"></div>
+                </div>
+            </div>
+            <div class="resumen-nivel">
+                <span>PESO NIVEL FINAL</span>
+                <span class="tot-box tot-final" id="tot-final">0</span>
+            </div>
+        </div>
+
+        <!-- TOTALES GENERALES -->
+        <div class="totales-footer">
+            <div class="tot-row">
+                <span>PESO TOTAL:</span>
+                <span id="tot-general">0</span>
+            </div>
+            <div class="diferencia-box">
+                <div style="font-size: 0.75rem;">DIFERENCIA DE LADOS (IZQ - DER)</div>
+                <div style="display: flex; justify-content: space-around; font-size: 0.75rem; margin-top: 4px;">
+                    <span>IZQ: <b id="peso-tot-izq">0</b></span>
+                    <span>DER: <b id="peso-tot-der">0</b></span>
+                </div>
+                <div class="diferencia-val" id="diferencia-lados">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<<script>
+    let registros = [];
+    let distribucionTrailer = {
+        arriba: { izq: [], der: [] },
+        medio: { izq: [], der: [] },
+        final: { izq: [], der: [] }
+    };
+    let html5QrScanner = null;
+
+    const MAX_FILAS_CHICAS = 15;
+    const MAX_FILAS_GRANDES = 13;
+
+    // LÍMITES DE PESO POR SECCIÓN
+    const LIMITES_PESO = {
+        arriba: { min: 9800, max: 12700, idealMin: 10000, idealMax: 12500 }, // Con +/- 200 lbs de tolerancia
+        medio: { max: 16000 },
+        final: { min: 10000, max: 11500 }
+    };
+
+    window.onload = () => {
+        const memoria = localStorage.getItem('inventario_tarimas_v2');
+        if (memoria) {
+            registros = JSON.parse(memoria);
+        }
+        actualizarVistaInventario();
+        registrarServiceWorker();
+    };
+
+    function cambiarPestana(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+
+        if(tabId === 'tab-trailer' && registros.length > 0) {
+            ordenarTrailerAuto();
+        }
+    }
+
+    function autoProcesarSerial(val) {
+        if (val.trim() !== "") {
+            let parte = val.length >= 50 ? val.substring(5, 18).trim() : val.trim();
+            document.getElementById("numParte").value = parte;
+        }
+    }
+
+    async function toggleCamara() {
+        const readerDiv = document.getElementById("reader");
+        if (!html5QrScanner) {
+            readerDiv.style.display = "block";
+            html5QrScanner = new Html5Qrcode("reader");
+            try {
+                await html5QrScanner.start(
+                    { facingMode: "environment" }, 
+                    { fps: 15, qrbox: { width: 250, height: 250 } }, 
+                    (text) => { 
+                        autoProcesarSerial(text);
+                        toggleCamara();
+                        document.getElementById("pesoTarima").focus();
+                    }
+                );
+            } catch (err) {
+                alert("Error al abrir cámara: " + err);
+                readerDiv.style.display = "none";
+            }
+        } else {
+            await html5QrScanner.stop();
+            html5QrScanner = null;
+            readerDiv.style.display = "none";
+        }
+    }
+
+    function guardarRegistro() {
+        const numParte = document.getElementById("numParte").value.trim();
+        const peso = parseFloat(document.getElementById("pesoTarima").value);
+        const tipoTarima = document.getElementById("tipoTarima").value;
+
+        if (!numParte) return alert("Por favor escanee un código QR para el Número de Parte.");
+        if (isNaN(peso) || peso <= 0) return alert("Ingrese un peso válido mayor a 0.");
+
+        const esChica = tipoTarima.includes("Chica");
+
+        const nuevoItem = {
+            id: Date.now(),
+            numParte: numParte,
+            peso: peso,
+            tipoTarima: tipoTarima,
+            largo: esChica ? 40 : 48,
+            ancho: esChica ? 40 : 48,
+            fecha: new Date().toLocaleString()
+        };
+
+        registros.unshift(nuevoItem);
+        localStorage.setItem('inventario_tarimas_v2', JSON.stringify(registros));
+
+        document.getElementById("numParte").value = "";
+        document.getElementById("pesoTarima").value = "";
+
+        actualizarVistaInventario();
+    }
+
+    function borrarRegistro(id) {
+        registros = registros.filter(item => item.id !== id);
+        localStorage.setItem('inventario_tarimas_v2', JSON.stringify(registros));
+        actualizarVistaInventario();
+    }
+
+    function actualizarVistaInventario() {
+        const container = document.getElementById("listaInventario");
+        const counter = document.getElementById("counterBadge");
+        
+        container.innerHTML = "";
+        counter.innerText = `Registros Guardados: ${registros.length}`;
+
+        if (registros.length === 0) {
+            container.innerHTML = "<p style='text-align:center; color:gray; padding:20px 0;'>No hay registros guardados</p>";
+            return;
+        }
+
+        registros.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "inv-card";
+            card.innerHTML = `
+                <div class="inv-info">
+                    <span class="inv-part">N/P: ${item.numParte}</span>
+                    <span class="inv-weight">Peso: ${item.peso.toFixed(2)}</span>
+                    <span class="inv-tag">${item.tipoTarima} (${item.largo}"x${item.ancho}")</span>
+                </div>
+                <button class="btn-delete" onclick="borrarRegistro(${item.id})">✕</button>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function ordenarTrailerAuto() {
+        const warningsDiv = document.getElementById("warningsContainer");
+        warningsDiv.style.display = "none";
+        warningsDiv.innerHTML = "";
+        let advertencias = [];
+
+        distribucionTrailer = {
+            arriba: { izq: [], der: [] },
+            medio: { izq: [], der: [] },
+            final: { izq: [], der: [] }
+        };
+
+        if (registros.length === 0) {
+            renderizarTrailer();
+            return;
+        }
+
+        // 1. Ordenar items de mayor a menor peso
+        let items = [...registros].sort((a, b) => b.peso - a.peso);
+
+        // 2. Asignar primero a Frente (Arriba) buscando alcanzar el rango ~10,000 - 12,500
+        let pesoArriba = 0;
+        let itemsRestantes = [];
+
+        for (let item of items) {
+            if (pesoArriba + item.peso <= LIMITES_PESO.arriba.max) {
+                asignarALado('arriba', item);
+                pesoArriba += item.peso;
+            } else {
+                itemsRestantes.push(item);
+            }
+        }
+
+        // 3. Asignar a la sección Final (Abajo) buscando el rango 10,000 - 11,500
+        let pesoFinal = 0;
+        let itemsParaMedio = [];
+
+        for (let item of itemsRestantes) {
+            if (pesoFinal + item.peso <= LIMITES_PESO.final.max) {
+                asignarALado('final', item);
+                pesoFinal += item.peso;
+            } else {
+                itemsParaMedio.push(item);
+            }
+        }
+
+        // 4. Todo lo restante va al Medio (Máximo 16,000)
+        let pesoMedio = 0;
+        for (let item of itemsParaMedio) {
+            if (pesoMedio + item.peso <= LIMITES_PESO.medio.max) {
+                asignarALado('medio', item);
+                pesoMedio += item.peso;
+            } else {
+                advertencias.push(`🚨 Exceso en Medio: La tarima ${item.numParte} (${item.peso} lbs) excede el peso permitido.`);
+            }
+        }
+
+        // 5. Validaciones de Rangos y Advertencias Visuales
+        if (pesoArriba < LIMITES_PESO.arriba.min) {
+            advertencias.push(`⚠️ Frente (Arriba): Peso actual (${pesoArriba.toFixed(0)} lbs) está por debajo del mínimo objetivo (10,000 lbs).`);
+        }
+        if (pesoFinal < LIMITES_PESO.final.min && (pesoArriba + pesoMedio + pesoFinal) > 20000) {
+            advertencias.push(`⚠️ Final (Puerta): Peso actual (${pesoFinal.toFixed(0)} lbs) está por debajo del objetivo sugerido (10,000 lbs).`);
+        }
+
+        if (advertencias.length > 0) {
+            warningsDiv.innerHTML = advertencias.join("<br>");
+            warningsDiv.style.display = "block";
+        }
+
+        renderizarTrailer();
+    }
+
+    function asignarALado(seccion, item) {
+        let sumIzq = distribucionTrailer[seccion].izq.reduce((a, b) => a + b.peso, 0);
+        let sumDer = distribucionTrailer[seccion].der.reduce((a, b) => a + b.peso, 0);
+
+        if (sumIzq <= sumDer) {
+            distribucionTrailer[seccion].izq.push(item);
+        } else {
+            distribucionTrailer[seccion].der.push(item);
+        }
+    }
+
+    function getPesoNivel(nivel) {
+        let izq = distribucionTrailer[nivel].izq.reduce((a, b) => a + b.peso, 0);
+        let der = distribucionTrailer[nivel].der.reduce((a, b) => a + b.peso, 0);
+        return izq + der;
+    }
+
+    function renderizarTrailer() {
+        const niveles = ['arriba', 'medio', 'final'];
+        let pesoTotGeneral = 0;
+        let pesoTotIzq = 0;
+        let pesoTotDer = 0;
+
+        niveles.forEach(nivel => {
+            let izqContainer = document.getElementById(`list-${nivel}-izq`);
+            let derContainer = document.getElementById(`list-${nivel}-der`);
+            izqContainer.innerHTML = "";
+            derContainer.innerHTML = "";
+
+            let pesoIzq = 0;
+            let pesoDer = 0;
+
+            distribucionTrailer[nivel].izq.forEach(item => {
+                pesoIzq += item.peso;
+                izqContainer.appendChild(crearCeldaPeso(item));
+            });
+
+            distribucionTrailer[nivel].der.forEach(item => {
+                pesoDer += item.peso;
+                derContainer.appendChild(crearCeldaPeso(item));
+            });
+
+            if (distribucionTrailer[nivel].izq.length === 0) izqContainer.innerHTML = `<div class="cell-peso vacia">-</div>`;
+            if (distribucionTrailer[nivel].der.length === 0) derContainer.innerHTML = `<div class="cell-peso vacia">-</div>`;
+
+            let totNivel = pesoIzq + pesoDer;
+            const elTot = document.getElementById(`tot-${nivel}`);
+            elTot.innerText = totNivel.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+
+            // Resaltar visualmente si el peso del nivel cumple los límites
+            if (nivel === 'arriba') {
+                elTot.style.background = (totNivel >= 9800 && totNivel <= 12700) ? "#4ade80" : "#fca5a5";
+            } else if (nivel === 'medio') {
+                elTot.style.background = (totNivel <= 16000) ? "#60a5fa" : "#fca5a5";
+            } else if (nivel === 'final') {
+                elTot.style.background = (totNivel >= 10000 && totNivel <= 11500) ? "#4ade80" : "#fcd34d";
+            }
+
+            pesoTotGeneral += totNivel;
+            pesoTotIzq += pesoIzq;
+            pesoTotDer += pesoDer;
+        });
+
+        document.getElementById("tot-general").innerText = pesoTotGeneral.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        document.getElementById("peso-tot-izq").innerText = pesoTotIzq.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        document.getElementById("peso-tot-der").innerText = pesoTotDer.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+
+        let dif = pesoTotIzq - pesoTotDer;
+        const difEl = document.getElementById("diferencia-lados");
+        difEl.innerText = (dif > 0 ? `+${dif.toFixed(2)}` : dif.toFixed(2));
+        difEl.style.background = Math.abs(dif) <= 500 ? "#86efac" : "#fca5a5";
+        difEl.style.color = Math.abs(dif) <= 500 ? "#14532d" : "#7f1d1d";
+    }
+
+    function crearCeldaPeso(item) {
+        const div = document.createElement("div");
+        const esChica = item.largo === 40;
+        div.className = `cell-peso ${esChica ? 'chica' : ''}`;
+        div.innerHTML = `
+            ${item.peso.toFixed(0)}
+            <span class="badge-dim">${item.numParte} (${item.largo}")</span>
+        `;
+        return div;
+    }
+
+    function exportarExcel() {
+        if (registros.length === 0) return alert("No hay datos para exportar.");
+
+        let dataExcel = [
+            ["REPORTE DE INVENTARIO Y ACOMODO DE TRAILER"],
+            ["FECHA:", document.getElementById("trFecha").value, "TRAILER:", document.getElementById("trTrailer").value],
+            ["SELLO:", document.getElementById("trSello").value, "BOL:", document.getElementById("trBol").value],
+            [],
+            ["INVENTARIO DETALLADO"],
+            ["Número de parte", "Peso", "Tipo de Tarima", "Dimensiones"]
+        ];
+
+        registros.forEach(item => {
+            dataExcel.push([item.numParte, item.peso, item.tipoTarima, `${item.largo}"x${item.ancho}"`]);
+        });
+
+        dataExcel.push([]);
+        dataExcel.push(["DISTRIBUCIÓN DE CÁLCULO EN TRÁILER"]);
+        dataExcel.push(["Nivel", "Lado Izquierdo (Peso)", "Lado Derecho (Peso)"]);
+
+        ['arriba', 'medio', 'final'].forEach(n => {
+            let maxFilas = Math.max(distribucionTrailer[n].izq.length, distribucionTrailer[n].der.length);
+            for(let i=0; i<maxFilas; i++) {
+                let pIzq = distribucionTrailer[n].izq[i] ? `${distribucionTrailer[n].izq[i].numParte} (${distribucionTrailer[n].izq[i].peso})` : "";
+                let pDer = distribucionTrailer[n].der[i] ? `${distribucionTrailer[n].der[i].numParte} (${distribucionTrailer[n].der[i].peso})` : "";
+                dataExcel.push([n.toUpperCase(), pIzq, pDer]);
+            }
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(dataExcel);
+        ws['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 18 }];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventario_Acomodo");
+
+        const fechaHoy = new Date().toISOString().slice(0,10);
+        XLSX.writeFile(wb, `Inventario_Acomodo_${fechaHoy}.xlsx`);
+    }
+
+    function registrarServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+                self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Error:', err));
+        }
+    }
+</script>
+
+
+</body>
+</html>
