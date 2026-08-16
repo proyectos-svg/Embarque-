@@ -2,696 +2,262 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Acomodo Tráiler & Inventario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventario Tarimas QR</title>
     
-    <meta name="theme-color" content="#1e40af">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-    <script defer src="https://unpkg.com/html5-qrcode"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #059669;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-            --text: #0f172a;
-            --danger: #dc2626;
+            --primary: #2563eb; --bg: #f3f4f6; --card: #ffffff;
+            --text: #1f2937; --danger: #ef4444; --success: #218838; --warning: #f59e0b;
         }
-
-        * { 
-            box-sizing: border-box; 
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            min-height: 100dvh;
-        }
-
-        .mobile-container {
-            width: 100%;
-            max-width: 480px;
-            min-height: 100vh;
-            min-height: 100dvh;
-            background: var(--card);
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.05);
-        }
-
-        /* NAVEGACIÓN PRINCIPAL */
-        .tabs { 
-            display: flex; 
-            background: #e2e8f0; 
-            border-radius: 12px; 
-            padding: 4px; 
-            margin-bottom: 12px; 
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .tab-btn {
-            flex: 1; 
-            padding: 12px 6px; 
-            border: none; 
-            border-radius: 8px;
-            font-weight: 800; 
-            font-size: 0.85rem; 
-            cursor: pointer;
-            background: transparent; 
-            color: #64748b;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn.active { 
-            background: white; 
-            color: var(--primary); 
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
-        }
-
-        .tab-content { display: none; flex: 1; }
-        .tab-content.active { display: flex; flex-direction: column; }
-
-        header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 10px; 
-            padding-bottom: 8px;
-            border-bottom: 1.5px solid #e2e8f0; 
-        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .app-card { background: white; width: 100%; max-width: 500px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 15px; box-sizing: border-box; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .field { margin-bottom: 12px; position: relative; }
+        label { display: block; font-size: 0.75rem; font-weight: 800; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 16px; box-sizing: border-box; background: white; }
+        input[readonly] { background: #e5e7eb; color: #4b5563; font-weight: bold; }
+        .btn-main { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        header h1 { margin: 0; font-size: 1.1rem; font-weight: 800; color: #0f172a; }
-
-        .btn-excel { 
-            background: var(--secondary); 
-            color: white; 
-            border: none; 
-            padding: 8px 12px; 
-            border-radius: 8px; 
-            font-weight: 800; 
-            font-size: 0.75rem; 
-        }
-
-        /* FORMULARIO Y BOTONES MÓVILES */
-        .input-group { margin-bottom: 10px; }
-
-        label { 
-            display: block; 
-            font-size: 0.7rem; 
-            font-weight: 800; 
-            color: #475569; 
-            margin-bottom: 4px; 
-            text-transform: uppercase; 
-        }
-
-        input[type="text"], input[type="number"], select {
-            width: 100%; 
-            padding: 14px; 
-            border: 2px solid #cbd5e1;
-            border-radius: 10px; 
-            font-size: 1rem; 
-            outline: none; 
-            background: #f8fafc;
-            color: var(--text);
-            font-weight: 600;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--primary);
-            background: #fff;
-        }
-
-        .btn { 
-            padding: 14px; 
-            border: none; 
-            border-radius: 12px; 
-            font-weight: 800; 
-            font-size: 0.95rem; 
-            color: white; 
-            cursor: pointer; 
-            width: 100%; 
-            margin-bottom: 8px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+        #reader { width: 100%; border-radius: 12px; overflow: hidden; margin-bottom: 15px; display: none; border: 2px solid var(--primary); background: black; min-height: 250px; position: relative; }
         
-        .btn-cam { background: var(--primary); }
-        .btn-save { background: #e91e63; font-size: 1rem; margin-top: 4px; }
-        .btn-action { background: var(--primary-dark); }
-
-        #reader { 
-            width: 100%; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            margin-bottom: 10px; 
-            border: 2px solid var(--primary); 
-            display: none; 
-        }
-
-        /* LISTA INVENTARIO */
-        .inv-list { 
-            flex: 1;
-            max-height: 40vh; 
-            overflow-y: auto; 
-            margin-top: 8px; 
-            padding-right: 2px;
-        }
-        
-        .inv-card { 
-            background: #f8fafc; 
-            border: 1px solid #e2e8f0; 
-            border-left: 5px solid var(--primary); 
-            border-radius: 10px; 
-            padding: 10px; 
-            margin-bottom: 8px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-        }
-        
-        .inv-info { display: flex; flex-direction: column; gap: 2px; }
-        .inv-part { font-weight: 800; font-size: 0.85rem; color: #0f172a; }
-        .inv-weight { font-size: 0.8rem; color: var(--secondary); font-weight: 700; }
-        .inv-tag { font-size: 0.7rem; color: #64748b; font-weight: 600; }
-
-        .btn-delete { 
-            background: #fee2e2; 
-            color: var(--danger); 
-            border: none; 
-            width: 32px; 
-            height: 32px; 
-            border-radius: 8px; 
-            font-weight: 800; 
-        }
-
-        /* DATOS TRÁILER Y SECCIONES */
-        .trailer-header-grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 6px; 
-            background: #f1f5f9; 
-            padding: 8px; 
-            border-radius: 10px; 
-            font-size: 0.7rem; 
-            font-weight: 800; 
-            margin-bottom: 10px; 
-            border: 1px solid #cbd5e1; 
-        }
-        
-        .trailer-header-grid input { 
-            padding: 6px 8px; 
-            font-size: 0.75rem; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 6px; 
-            background: #fff;
-        }
-
-        .trailer-section { 
-            border: 1.5px solid #0f172a; 
-            margin-bottom: 10px; 
-            background: #fff; 
-            border-radius: 8px; 
-            overflow: hidden; 
-        }
-        
-        .trailer-section-title { 
-            background: #cbd5e1; 
-            padding: 5px; 
-            font-weight: 800; 
-            text-align: center; 
-            font-size: 0.75rem; 
-            border-bottom: 1.5px solid #0f172a; 
-            text-transform: uppercase; 
-        }
-
-        .grid-nivel { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #cbd5e1; }
-        .col-lado { padding: 4px; }
-        .col-lado:first-child { border-right: 1.5px dashed #cbd5e1; }
-        .col-header { font-size: 0.6rem; text-align: center; font-weight: 800; color: #64748b; padding: 2px; background: #f8fafc; }
-
-        .cell-peso { 
-            background: #86efac; 
-            border: 1px solid #16a34a; 
-            padding: 4px; 
-            margin: 3px 0; 
-            text-align: center; 
-            font-size: 0.75rem; 
-            font-weight: 800; 
-            border-radius: 6px; 
-        }
-        
-        .cell-peso.chica { background: #bbf7d0; border-color: #22c55e; }
-        .cell-peso.vacia { background: #f8fafc; border: 1px dashed #cbd5e1; color: #94a3b8; font-weight: normal; }
-        .badge-dim { display: block; font-size: 0.55rem; color: #14532d; font-weight: 700; }
-
-        .resumen-nivel { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 6px 8px; 
-            background: #f8fafc; 
-            font-size: 0.7rem; 
-            font-weight: 800; 
-        }
-        
-        .tot-box { padding: 3px 8px; border-radius: 4px; font-weight: 800; color: #000; }
-
-        /* FOOTER DE TOTALES EN TRÁILER */
-        .totales-footer { 
-            background: #0f172a; 
-            color: white; 
-            padding: 10px; 
-            border-radius: 10px; 
-            margin-top: auto; 
-        }
-        
-        .tot-row { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; margin-bottom: 4px; }
-
-        .diferencia-box { background: #1e293b; color: white; text-align: center; padding: 6px; border-radius: 8px; margin-top: 6px; }
-        .diferencia-val { background: #86efac; color: #14532d; font-size: 0.9rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 2px; }
-
-        .warnings-container { 
-            margin-bottom: 8px; 
-            padding: 8px; 
-            background: #fffbe3; 
-            border: 1px solid #f59e0b; 
-            border-radius: 8px; 
-            font-size: 0.7rem; 
-            color: #b45309; 
-            display: none; 
-            font-weight: 700;
-        }
+        .inv-item { background: var(--card); border-radius: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; overflow: hidden; }
+        .inv-header { padding: 15px; background: #eef2ff; border-bottom: 1px solid #e5e7eb; display: flex; flex-direction: column; }
+        .detail-row { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; position: relative; padding-right: 50px; }
+        .btn-delete-row { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #fee2e2; color: #dc2626; border: none; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; background: var(--primary); color: white; }
     </style>
 </head>
 <body>
 
-<div class="mobile-container">
-    <div class="tabs">
-        <button class="tab-btn active" onclick="cambiarPestana(event, 'tab-inventario')">📦 INVENTARIO</button>
-        <button class="tab-btn" onclick="cambiarPestana(event, 'tab-trailer')">🚛 ACOMODO</button>
+<div class="app-card">
+    <header>
+        <h2 style="margin:0; font-size: 1.2rem;">📦 Control de Tarimas QR</h2>
+    </header>
+
+    <div id="reader"></div>
+
+    <button class="btn-main" onclick="toggleScanner()" style="margin-bottom: 15px; background: #374151;">📷 ESCANEAR ETIQUETA</button>
+
+    <div class="field">
+        <label>Número de Parte (Automático)</label>
+        <input type="text" id="part-number" readonly placeholder="Escanea para obtener...">
+    </div>
+    
+    <div class="field">
+        <label>Serial (Automático)</label>
+        <input type="text" id="serial-number" readonly placeholder="Escanea para obtener...">
     </div>
 
-    <!-- PESTAÑA INVENTARIO -->
-    <div id="tab-inventario" class="tab-content active">
-        <header>
-            <h1>Captura de Inventario</h1>
-            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
-        </header>
-
-        <button class="btn btn-cam" onclick="toggleCamara()">📷 ESCANEAR QR</button>
-        <div id="reader"></div>
-
-        <div class="input-group">
-            <label>Tipo de Tarima</label>
-            <select id="tipoTarima">
-                <option value="Tarima Chica">📦 Tarima Chica (40" x 40")</option>
-                <option value="Tarima Grande">📦 Tarima Grande (48" x 48")</option>
+    <div class="field" style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+            <label>Tamaño Tarima</label>
+            <select id="tarima-size" onchange="saveConfig()">
+                <option value="40">40" x 40"</option>
+                <option value="48">48" x 48"</option>
             </select>
         </div>
-
-        <div class="input-group">
-            <label>Número de Parte</label>
-            <input type="text" id="numParte" placeholder="Escanee o escriba...">
-        </div>
-
-        <div class="input-group">
-            <label>Peso de Tarima (lbs)</label>
-            <!-- inputmode="decimal" abre directamente el teclado numérico en celulares -->
-            <input type="number" id="pesoTarima" inputmode="decimal" placeholder="0.00" step="0.01">
-        </div>
-
-        <button class="btn btn-save" onclick="guardarRegistro()">💾 GUARDAR TARIMA</button>
-
-        <div style="margin-top: 10px;">
-            <div style="text-align: center; font-size: 0.75rem; font-weight: 800; color: #64748b;" id="counterBadge">
-                Registros: 0
-            </div>
-            <div id="listaInventario" class="inv-list"></div>
+        <div style="flex: 1;">
+            <label>Peso (Lbs)</label>
+            <input type="number" id="tarima-weight" placeholder="0.00" inputmode="decimal">
         </div>
     </div>
 
-    <!-- PESTAÑA ACOMODO TRÁILER -->
-    <div id="tab-trailer" class="tab-content">
-        <header>
-            <h1>Distribución Tráiler</h1>
-            <button class="btn-excel" onclick="exportarExcel()">📊 EXCEL</button>
-        </header>
+    <button class="btn-main" onclick="agregar()">➕ AGREGAR A LA LISTA</button>
 
-        <div class="trailer-header-grid">
-            <div>FECHA: <input type="text" id="trFecha" value="13-Aug-26"></div>
-            <div>TRÁILER: <input type="text" id="trTrailer" value="53174"></div>
-            <div>SELLO: <input type="text" id="trSello" value="402456"></div>
-            <div>BOL: <input type="text" id="trBol" value=""></div>
-        </div>
-
-        <button class="btn btn-action" onclick="ordenarTrailerAuto()">🔄 ACOMODAR AUTOMÁTICO</button>
-
-        <div id="warningsContainer" class="warnings-container"></div>
-
-        <div class="trailer-section">
-            <div class="trailer-section-title">ARRIBA (FRENTE) [10k - 12.5k lbs]</div>
-            <div class="grid-nivel">
-                <div class="col-lado"><div class="col-header">IZQ</div><div id="list-arriba-izq"></div></div>
-                <div class="col-lado"><div class="col-header">DER</div><div id="list-arriba-der"></div></div>
-            </div>
-            <div class="resumen-nivel">
-                <span>TOTAL FRENTE</span>
-                <span class="tot-box" id="tot-arriba">0</span>
-            </div>
-        </div>
-
-        <div class="trailer-section">
-            <div class="trailer-section-title">MEDIO [Máx 16k lbs]</div>
-            <div class="grid-nivel">
-                <div class="col-lado"><div class="col-header">IZQ</div><div id="list-medio-izq"></div></div>
-                <div class="col-lado"><div class="col-header">DER</div><div id="list-medio-der"></div></div>
-            </div>
-            <div class="resumen-nivel">
-                <span>TOTAL MEDIO</span>
-                <span class="tot-box" id="tot-medio">0</span>
-            </div>
-        </div>
-
-        <div class="trailer-section">
-            <div class="trailer-section-title">FINAL (PUERTA) [10k - 11.5k lbs]</div>
-            <div class="grid-nivel">
-                <div class="col-lado"><div class="col-header">IZQ</div><div id="list-final-izq"></div></div>
-                <div class="col-lado"><div class="col-header">DER</div><div id="list-final-der"></div></div>
-            </div>
-            <div class="resumen-nivel">
-                <span>TOTAL PUERTA</span>
-                <span class="tot-box" id="tot-final">0</span>
-            </div>
-        </div>
-
-        <div class="totales-footer">
-            <div class="tot-row"><span>PESO TOTAL:</span><span id="tot-general">0 lbs</span></div>
-            <div class="diferencia-box">
-                <div style="font-size: 0.65rem; font-weight: 700;">BALANCE LATERAL (IZQ vs DER)</div>
-                <div style="display: flex; justify-content: space-around; font-size: 0.7rem; margin-top: 2px;">
-                    <span>IZQ: <b id="peso-tot-izq">0</b></span>
-                    <span>DER: <b id="peso-tot-der">0</b></span>
-                </div>
-                <div class="diferencia-val" id="diferencia-lados">0</div>
-            </div>
-        </div>
+    <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+    
+    <div id="contenedorPrincipal"></div>
+    
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn-main" onclick="descargarExcel()" style="background:var(--success); margin-top:0;">📊 EXPORTAR</button>
+        <button class="btn-main" onclick="limpiarTodo()" style="background:var(--danger); margin-top:0;">🗑️ VACIAR</button>
     </div>
 </div>
 
 <script>
-    let registros = [];
-    let distribucionTrailer = { arriba: { izq: [], der: [] }, medio: { izq: [], der: [] }, final: { izq: [], der: [] } };
-    let html5QrScanner = null;
+    let inventory = JSON.parse(localStorage.getItem('pallet_data_v1')) || [];
+    let savedSize = localStorage.getItem('pallet_last_size') || "40";
+    let html5QrCode;
+    let flashEnabled = false;
 
-    const LIMITES_PESO = {
-        arriba: { min: 9800, max: 12700 },
-        medio: { max: 16000 },
-        final: { min: 10000, max: 11500 }
-    };
+    document.getElementById('tarima-size').value = savedSize;
 
-    document.addEventListener("DOMContentLoaded", () => {
-        const memoria = localStorage.getItem('inventario_tarimas_v2');
-        if (memoria) {
-            try { registros = JSON.parse(memoria); } catch(e) { registros = []; }
-        }
-        actualizarVistaInventario();
-    });
+    async function toggleScanner() {
+        const readerDiv = document.getElementById('reader');
+        if (readerDiv.style.display === 'block') { 
+            stopScanner(); 
+        } else {
+            readerDiv.style.display = 'block';
+            html5QrCode = new Html5Qrcode("reader");
+            const configScan = { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, videoConstraints: { facingMode: "environment" } };
 
-    function cambiarPestana(evt, tabId) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        
-        if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
-        document.getElementById(tabId).classList.add('active');
-
-        if(tabId === 'tab-trailer' && registros.length > 0) {
-            ordenarTrailerAuto();
-        }
-    }
-
-    function autoProcesarSerial(val) {
-        if (val.trim() !== "") {
-            let parte = val.length >= 50 ? val.substring(5, 18).trim() : val.trim();
-            document.getElementById("numParte").value = parte;
-        }
-    }
-
-    async function toggleCamara() {
-        if (typeof Html5Qrcode === 'undefined') {
-            return alert("Librería de cámara cargando...");
-        }
-
-        const readerDiv = document.getElementById("reader");
-        if (!html5QrScanner) {
-            readerDiv.style.display = "block";
-            html5QrScanner = new Html5Qrcode("reader");
             try {
-                await html5QrScanner.start(
-                    { facingMode: "environment" }, 
-                    { fps: 15, qrbox: { width: 220, height: 220 } }, 
-                    (text) => { 
-                        autoProcesarSerial(text);
-                        toggleCamara();
-                        document.getElementById("pesoTarima").focus();
-                    }
-                );
+                await html5QrCode.start({ facingMode: "environment" }, configScan, onScanSuccess);
+                setTimeout(async () => {
+                    try {
+                        const track = html5QrCode.getRunningTrack();
+                        const capabilities = track.getCapabilities();
+                        if (capabilities.torch || ('torch' in capabilities)) crearBotonFlash(track);
+                    } catch (e) { console.warn("No flash support."); }
+                }, 500);
             } catch (err) {
-                alert("Error de cámara: " + err);
-                readerDiv.style.display = "none";
+                alert("Error al iniciar cámara. Verifica permisos.");
+                readerDiv.style.display = 'none';
             }
-        } else {
-            await html5QrScanner.stop();
-            html5QrScanner = null;
-            readerDiv.style.display = "none";
         }
     }
 
-    function guardarRegistro() {
-        const numParte = document.getElementById("numParte").value.trim();
-        const peso = parseFloat(document.getElementById("pesoTarima").value);
-        const tipoTarima = document.getElementById("tipoTarima").value;
-
-        if (!numParte) return alert("Ingrese Número de Parte.");
-        if (isNaN(peso) || peso <= 0) return alert("Ingrese un peso válido.");
-
-        const esChica = tipoTarima.includes("Chica");
-
-        const nuevoItem = {
-            id: Date.now(),
-            numParte: numParte,
-            peso: peso,
-            tipoTarima: tipoTarima,
-            largo: esChica ? 40 : 48,
-            ancho: esChica ? 40 : 48
+    function crearBotonFlash(track) {
+        if (document.getElementById('btn-flash')) return;
+        const btn = document.createElement('button');
+        btn.id = 'btn-flash';
+        btn.innerHTML = "🔦";
+        btn.style = "position:absolute; top:10px; right:10px; z-index:99; padding:10px; background:#f59e0b; color:white; border:none; border-radius:50%; font-size:1.2rem;";
+        btn.onclick = async () => {
+            flashEnabled = !flashEnabled;
+            await track.applyConstraints({ advanced: [{ torch: flashEnabled }] });
+            btn.style.background = flashEnabled ? "#ef4444" : "#f59e0b";
         };
-
-        registros.unshift(nuevoItem);
-        localStorage.setItem('inventario_tarimas_v2', JSON.stringify(registros));
-
-        document.getElementById("numParte").value = "";
-        document.getElementById("pesoTarima").value = "";
-
-        actualizarVistaInventario();
+        document.getElementById('reader').appendChild(btn);
     }
 
-    function borrarRegistro(id) {
-        registros = registros.filter(item => item.id !== id);
-        localStorage.setItem('inventario_tarimas_v2', JSON.stringify(registros));
-        actualizarVistaInventario();
-    }
-
-    function actualizarVistaInventario() {
-        const container = document.getElementById("listaInventario");
-        const counter = document.getElementById("counterBadge");
+    function onScanSuccess(decodedText) {
+        // Separa el QR asumiendo el formato "Serial,Order,PartNumber,Qty,Weight"
+        let parts = decodedText.split(',');
         
+        if (parts.length < 3) {
+            alert("Formato de QR no válido. Faltan comas.");
+            return;
+        }
+
+        let serial = parts[0];
+        let partNum = parts[2]; // Extrae "0051-884529-700" del índice 2
+
+        // Validación: Comprueba que no haya números de parte diferentes
+        if (inventory.length > 0) {
+            let partEnCurso = inventory[0].partNumber;
+            if (partNum !== partEnCurso) {
+                alert(`¡ALERTA DE MEZCLA!\n\nEstás trabajando con el Número de Parte: ${partEnCurso}.\n\nEl QR escaneado tiene: ${partNum}.`);
+                stopScanner();
+                return;
+            }
+        }
+
+        document.getElementById('part-number').value = partNum;
+        document.getElementById('serial-number').value = serial;
+        stopScanner();
+    }
+
+    function stopScanner() {
+        if (html5QrCode) { 
+            html5QrCode.stop().then(() => { 
+                document.getElementById('reader').style.display = 'none'; 
+                flashEnabled = false;
+            }); 
+        }
+    }
+
+    function saveConfig() {
+        localStorage.setItem('pallet_last_size', document.getElementById('tarima-size').value);
+    }
+
+    function agregar() {
+        const partNum = document.getElementById('part-number').value.trim();
+        const serial = document.getElementById('serial-number').value.trim();
+        const size = document.getElementById('tarima-size').value;
+        const weight = parseFloat(document.getElementById('tarima-weight').value);
+
+        if(!partNum || !serial || isNaN(weight)) return alert("Escanea el QR y asegúrate de agregar el peso.");
+
+        // Doble validación por seguridad antes de insertar
+        if (inventory.length > 0) {
+            if (partNum !== inventory[0].partNumber) {
+                return alert("¡Error! No puedes agregar un número de parte diferente a la lista actual.");
+            }
+        }
+
+        inventory.unshift({ id: Date.now(), partNumber: partNum, serial: serial, size: size, weight: weight, time: new Date().toLocaleTimeString() });
+        
+        // Limpiar campos de entrada para el siguiente escaneo
+        document.getElementById('serial-number').value = "";
+        document.getElementById('tarima-weight').value = "";
+        
+        guardarYRenderizar();
+    }
+
+    function borrarRegistro(id) { 
+        inventory = inventory.filter(i => i.id !== id); 
+        guardarYRenderizar(); 
+    }
+    
+    function limpiarTodo() { 
+        if(confirm("¿Seguro que deseas borrar toda la lista actual?")) { 
+            inventory = []; 
+            document.getElementById('part-number').value = "";
+            guardarYRenderizar(); 
+        } 
+    }
+
+    function guardarYRenderizar() {
+        localStorage.setItem('pallet_data_v1', JSON.stringify(inventory));
+        const container = document.getElementById('contenedorPrincipal');
         container.innerHTML = "";
-        counter.innerText = `Registros Guardados: ${registros.length}`;
 
-        if (registros.length === 0) {
-            container.innerHTML = "<p style='text-align:center; color:gray; padding:15px 0; font-size:0.8rem;'>Sin registros</p>";
+        if (inventory.length === 0) {
+            container.innerHTML = "<div style='text-align:center; color:#9ca3af; padding:20px;'>No hay tarimas registradas.</div>";
             return;
         }
 
-        registros.forEach(item => {
-            const card = document.createElement("div");
-            card.className = "inv-card";
-            card.innerHTML = `
-                <div class="inv-info">
-                    <span class="inv-part">${item.numParte}</span>
-                    <span class="inv-weight">${item.peso.toFixed(1)} lbs</span>
-                    <span class="inv-tag">${item.tipoTarima} (${item.largo}")</span>
-                </div>
-                <button class="btn-delete" onclick="borrarRegistro(${item.id})">✕</button>
-            `;
-            container.appendChild(card);
-        });
-    }
+        let totalLbs = inventory.reduce((sum, item) => sum + item.weight, 0);
 
-    function ordenarTrailerAuto() {
-        const warningsDiv = document.getElementById("warningsContainer");
-        warningsDiv.style.display = "none";
-        warningsDiv.innerHTML = "";
-        let advertencias = [];
-
-        distribucionTrailer = { arriba: { izq: [], der: [] }, medio: { izq: [], der: [] }, final: { izq: [], der: [] } };
-
-        if (registros.length === 0) {
-            renderizarTrailer();
-            return;
-        }
-
-        let items = [...registros].sort((a, b) => b.peso - a.peso);
-        let pesoArriba = 0;
-        let itemsRestantes = [];
-
-        for (let item of items) {
-            if (pesoArriba + item.peso <= LIMITES_PESO.arriba.max) {
-                asignarALado('arriba', item);
-                pesoArriba += item.peso;
-            } else {
-                itemsRestantes.push(item);
-            }
-        }
-
-        let pesoFinal = 0;
-        let itemsParaMedio = [];
-
-        for (let item of itemsRestantes) {
-            if (pesoFinal + item.peso <= LIMITES_PESO.final.max) {
-                asignarALado('final', item);
-                pesoFinal += item.peso;
-            } else {
-                itemsParaMedio.push(item);
-            }
-        }
-
-        let pesoMedio = 0;
-        for (let item of itemsParaMedio) {
-            if (pesoMedio + item.peso <= LIMITES_PESO.medio.max) {
-                asignarALado('medio', item);
-                pesoMedio += item.peso;
-            } else {
-                advertencias.push(`🚨 Exceso en Medio: ${item.numParte} (${item.peso} lbs) supera el límite.`);
-            }
-        }
-
-        if (pesoArriba < LIMITES_PESO.arriba.min) {
-            advertencias.push(`⚠️ Frente: Peso actual (${pesoArriba.toFixed(0)} lbs) menor a 10,000 lbs.`);
-        }
-
-        if (advertencias.length > 0) {
-            warningsDiv.innerHTML = advertencias.join("<br>");
-            warningsDiv.style.display = "block";
-        }
-
-        renderizarTrailer();
-    }
-
-    function asignarALado(seccion, item) {
-        let sumIzq = distribucionTrailer[seccion].izq.reduce((a, b) => a + b.peso, 0);
-        let sumDer = distribucionTrailer[seccion].der.reduce((a, b) => a + b.peso, 0);
-
-        if (sumIzq <= sumDer) {
-            distribucionTrailer[seccion].izq.push(item);
-        } else {
-            distribucionTrailer[seccion].der.push(item);
-        }
-    }
-
-    function renderizarTrailer() {
-        const niveles = ['arriba', 'medio', 'final'];
-        let pesoTotGeneral = 0, pesoTotIzq = 0, pesoTotDer = 0;
-
-        niveles.forEach(nivel => {
-            let izqContainer = document.getElementById(`list-${nivel}-izq`);
-            let derContainer = document.getElementById(`list-${nivel}-der`);
-            izqContainer.innerHTML = ""; derContainer.innerHTML = "";
-
-            let pesoIzq = 0, pesoDer = 0;
-
-            distribucionTrailer[nivel].izq.forEach(item => {
-                pesoIzq += item.peso;
-                izqContainer.appendChild(crearCeldaPeso(item));
-            });
-
-            distribucionTrailer[nivel].der.forEach(item => {
-                pesoDer += item.peso;
-                derContainer.appendChild(crearCeldaPeso(item));
-            });
-
-            if (distribucionTrailer[nivel].izq.length === 0) izqContainer.innerHTML = `<div class="cell-peso vacia">-</div>`;
-            if (distribucionTrailer[nivel].der.length === 0) derContainer.innerHTML = `<div class="cell-peso vacia">-</div>`;
-
-            let totNivel = pesoIzq + pesoDer;
-            const elTot = document.getElementById(`tot-${nivel}`);
-            elTot.innerText = totNivel.toLocaleString('en-US', {maximumFractionDigits: 0}) + " lbs";
-
-            if (nivel === 'arriba') elTot.style.background = (totNivel >= 9800 && totNivel <= 12700) ? "#4ade80" : "#fca5a5";
-            if (nivel === 'medio') elTot.style.background = (totNivel <= 16000) ? "#60a5fa" : "#fca5a5";
-            if (nivel === 'final') elTot.style.background = (totNivel >= 10000 && totNivel <= 11500) ? "#4ade80" : "#fcd34d";
-
-            pesoTotGeneral += totNivel;
-            pesoTotIzq += pesoIzq;
-            pesoTotDer += pesoDer;
-        });
-
-        document.getElementById("tot-general").innerText = pesoTotGeneral.toLocaleString('en-US', {maximumFractionDigits: 0}) + " lbs";
-        document.getElementById("peso-tot-izq").innerText = pesoTotIzq.toLocaleString('en-US', {maximumFractionDigits: 0});
-        document.getElementById("peso-tot-der").innerText = pesoTotDer.toLocaleString('en-US', {maximumFractionDigits: 0});
-
-        let dif = pesoTotIzq - pesoTotDer;
-        const difEl = document.getElementById("diferencia-lados");
-        difEl.innerText = (dif > 0 ? `+${dif.toFixed(0)}` : dif.toFixed(0)) + " lbs";
-        difEl.style.background = Math.abs(dif) <= 500 ? "#86efac" : "#fca5a5";
-    }
-
-    function crearCeldaPeso(item) {
         const div = document.createElement("div");
-        div.className = `cell-peso ${item.largo === 40 ? 'chica' : ''}`;
-        div.innerHTML = `${item.peso.toFixed(0)} <span class="badge-dim">${item.numParte}</span>`;
-        return div;
+        div.className = "inv-item";
+        div.innerHTML = `
+            <div class="inv-header">
+                <span style="font-size:0.8rem; color:#6b7280;">NÚMERO DE PARTE ACTIVO</span>
+                <b style="font-size:1.2rem; margin:5px 0;">${inventory[0].partNumber}</b>
+                <div>
+                    <span class="badge">Tarimas: ${inventory.length}</span>
+                    <span class="badge" style="background:#4f46e5;">Total: ${totalLbs.toFixed(2)} lbs</span>
+                </div>
+            </div>
+            <div>
+                ${inventory.map(r => `
+                <div class="detail-row">
+                    <div><b>Serial:</b> ${r.serial}</div>
+                    <div><b>Tamaño:</b> ${r.size}" | <b>Peso:</b> ${r.weight.toFixed(2)} lbs</div>
+                    <div style="font-size:0.7rem; color:#9ca3af;">Hora: ${r.time}</div>
+                    <button class="btn-delete-row" onclick="borrarRegistro(${r.id})">✕</button>
+                </div>`).join('')}
+            </div>`;
+        container.appendChild(div);
     }
 
-    function exportarExcel() {
-        if (typeof XLSX === 'undefined') return alert("Cargando librería...");
-        if (registros.length === 0) return alert("Sin datos.");
-
-        let dataExcel = [
-            ["REPORTE DE INVENTARIO Y ACOMODO DE TRAILER"],
-            ["FECHA:", document.getElementById("trFecha").value, "TRAILER:", document.getElementById("trTrailer").value],
+    function descargarExcel() {
+        if (inventory.length === 0) return alert("No hay datos para exportar");
+        
+        let ws_data = [
+            ["REPORTE DE TARIMAS ESCANEADAS", "", "", "", ""],
+            ["FECHA:", new Date().toLocaleDateString(), "", "", ""],
             [],
-            ["INVENTARIO DETALLADO"],
-            ["Número de parte", "Peso (lbs)", "Tipo de Tarima", "Dimensiones"]
+            ["NÚMERO DE PARTE", "SERIAL", "TAMAÑO TARIMA", "PESO (LBS)", "HORA"]
         ];
-
-        registros.forEach(item => {
-            dataExcel.push([item.numParte, item.peso, item.tipoTarima, `${item.largo}"x${item.ancho}"`]);
+        
+        inventory.forEach(i => { 
+            ws_data.push([i.partNumber, i.serial, i.size + '"', i.weight.toFixed(2), i.time]); 
         });
-
-        const ws = XLSX.utils.aoa_to_sheet(dataExcel);
+        
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventario");
-        XLSX.writeFile(wb, `Inventario_${new Date().toISOString().slice(0,10)}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Tarimas");
+        XLSX.writeFile(wb, `Tarimas_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
+
+    window.onload = guardarYRenderizar;
 </script>
 </body>
 </html>
